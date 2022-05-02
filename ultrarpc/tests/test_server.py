@@ -11,7 +11,7 @@ def double(x:int,y:int)->int:
     return x**y
 
 
-global value
+
 value=100
 
 @rpcserver.register_function()
@@ -28,6 +28,11 @@ def hi(string:str):
     return string
 
 
+@rpcserver.register_function(name='hello')
+def hi2(string:str):
+    """返回字符串"""
+    return string
+
 
 @rpcserver.register_function
 def get_dict()->dict:
@@ -40,6 +45,48 @@ def get_dict()->dict:
 def get_func():
     """###目前还无法返回函数。测试返回一个函数"""
     return sub
+
+
+
+# 注册类的实例
+class TestClass:
+
+    def __init__(self) -> None:
+        self.data = 1
+
+    def add(self,x:int)->int:
+        """操作类中的变量"""
+        self.data+=x
+        return self.data
+
+    def say(self,name:str)->str:
+        """测试输出"""
+        return f'hello {name}'
+
+rpcserver.register_class(TestClass(),'testclass')
+
+
+
+# 使用装饰起注册类，将在内部自动实例化
+@rpcserver.register_class('testclass2',data=50)
+class TestClass2:
+
+    def __init__(self,data) -> None:
+        self.data = data
+
+    def add(self,x:int)->int:
+        """操作类中的变量"""
+        self.data+=x
+        return self.data
+
+    def say(self,name:str)->str:
+        """测试输出"""
+        return f'hello {name}'
+
+
+
+
+
 
 
 if __name__ == '__main__':
