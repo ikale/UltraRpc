@@ -83,7 +83,7 @@ class Update_Localproxy:
                 else:
                     # 修改子类或创建子类
                     p_ins = localproxy_instances._ins
-                    newclass = type(f['class_'],(LocalProxy,),globals())
+                    newclass = type(f['class_'],(LocalProxy,),{})
                     new_rpcfunc = newclass(localproxy_instances._sever_proxy,_ins=p_ins+_ins)
                     new_multicall = create_multicall_proxy_instance(localproxy_instances._sever_proxy,_ins=p_ins+_ins,class_name=f['class_'])
                     setattr(localproxy_instances,_ins,new_rpcfunc)
@@ -305,7 +305,7 @@ def create_multicall_proxy_instance(sever_proxy,_ins='',class_name=None)->LocalP
     if class_name is None:
         muticall = LocalProxy(sever_proxy,is_multicall=True,_ins=_ins)
     else:
-        newclass = type(class_name,(LocalProxy,),globals())
+        newclass = type(class_name,(LocalProxy,),{})
         muticall = newclass(sever_proxy,is_multicall=True,_ins=_ins)
 
     def results(self,clear=True):
@@ -354,7 +354,7 @@ class RpcClient:
             return
         self.__init = True
         self._multicall:LocalProxy = create_multicall_proxy_instance(self._sever_proxy,class_name="Multicall")
-        self.__rpcfunc:LocalProxy = type("RpcFuncs",(LocalProxy,),globals())(self._sever_proxy)
+        self.__rpcfunc:LocalProxy = type("RpcFuncs",(LocalProxy,),{})(self._sever_proxy)
         Update_Localproxy.rpcfunc_localproxy_instances = self.__rpcfunc
         Update_Localproxy.multicall_localproxy_instances =self._multicall
         Update_Localproxy.update_rpcfunc()
@@ -477,6 +477,7 @@ class RpcServer:
 
             f = getattr(_instance,i)
             if inspect.ismethod(f) or inspect.isfunction(f):
+
                 method_name = f'{name_}.{i}'
                 self.register_function(f,method_name)
         
