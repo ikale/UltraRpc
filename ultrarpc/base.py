@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import sys
 import warnings
 from functools import partial
@@ -10,12 +11,14 @@ from datetime import datetime
 
 from .utils import is_port_open,get_funcs_info
 
+@dataclass
+class ResultError:
+    res:str
 
 KEEPWORD = ['results','clear_results','clear_calltasks','sys']
 
 
-
-def add_multicall_funcinfo(localproxy_instance,func,_locals):
+def _add_multicall_funcinfo__(localproxy_instance,func,_locals):
     """为multicall增加一条调用信息"""
     _ = dict(
         methodName=localproxy_instance._class+func.__name__,
@@ -104,17 +107,21 @@ class Update_Localproxy:
         # add to LocalProxy instance
         code = f"""def {name}(self,{args}):
                 '''{doc}'''
+                __l__ = locals()
+                for __kk__,__tt__ in {annotations}.items():
+                    __t__ = type(__l__[__kk__]).__name__
+                    if __t__!=__tt__:
+                        raise TypeError('parameter "'+__kk__+'" need an '+__tt__+', but it is an '+__t__+'.')
+
                 if self._is_multicall:
-                    add_multicall_funcinfo(self,self.{name},locals())
+                    _add_multicall_funcinfo__(self,self.{name},locals())
                     return self
-                else:
-                    
-                    
-                    res = eval("self._sever_proxy."+self._class+"{name}")({args})
-                    if res.get("isfunc"):
-                        return eval(res["result"])
+                else: 
+                    __res__ = eval("self._sever_proxy."+self._class+"{name}")({args})
+                    if __res__.get("isfunc"):
+                        return eval(__res__["result"])
                     else:
-                        return res["result"]
+                        return __res__["result"]
         """
         module_code = compile(code, '', 'exec')
         function_code = [c for c in module_code.co_consts if isinstance(c, types.CodeType)][0]
@@ -277,8 +284,6 @@ class LocalProxy:
 
 
 
-
-
 def create_multicall_proxy_instance(sever_proxy,_class='')->LocalProxy:
     muticall = LocalProxy(sever_proxy,is_multicall=True,_class=_class)
 
@@ -286,6 +291,14 @@ def create_multicall_proxy_instance(sever_proxy,_class='')->LocalProxy:
         if len(self._calltasks)>0:
             self._results = self._sever_proxy.sys.multicall(self._calltasks)
             self._calltasks = []
+            res = []
+            for a in self._results['result']:
+                if type(a) == dict:
+                    res.append(ResultError(res=a['faultString']))
+                else:
+                    res.append(a[0]['result'])
+            self._results = res
+
         res = self._results
         if clear:
             self._results = []
