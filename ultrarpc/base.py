@@ -476,10 +476,9 @@ class RpcServer:
                 continue
 
             f = getattr(_instance,i)
-            if not inspect.ismethod(f):
-                continue
-            method_name = f'{name_}.{i}'
-            self.register_function(f,method_name)
+            if inspect.ismethod(f) or inspect.isfunction(f):
+                method_name = f'{name_}.{i}'
+                self.register_function(f,method_name)
         
         return class_or_ins
 
