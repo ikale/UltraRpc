@@ -4,7 +4,7 @@ from setuptools import Extension, find_packages, setup,find_packages
 
 setup(
     name="ultrarpc",  
-    version="0.5", 
+    version="0.5.1", 
     author="ikale", 
     author_email="ikale@qq.com", 
     # 最重要的就是py_modules和packages
