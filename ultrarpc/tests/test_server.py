@@ -121,8 +121,5 @@ class TestClass3:
         return f'hello {name}'
 
 
-
-
-
 if __name__ == '__main__':
     rpcserver.run()

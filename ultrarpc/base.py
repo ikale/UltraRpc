@@ -295,9 +295,9 @@ class LocalProxy:
             if hasattr(self,name):
                 return partial(self.__notfound_func,name)
             else:
-                raise AttributeError(f"'LocalProxy' object has no attribute '{name}'")
+                raise AttributeError(f"'{self.__class__.__name__} ' object has no attribute '{name}'")
         else:
-            raise AttributeError(f"'LocalProxy' object has no attribute '{name}'")
+            raise AttributeError(f"'{self.__class__.__name__} ' object has no attribute '{name}'")
 
 
 
@@ -461,6 +461,9 @@ class RpcServer:
             
         if name_ is None:
             raise ValueError(f"name {name_} is not a string!")
+        
+        if inspect.ismodule(class_or_ins):
+            raise ValueError(f"'{class_or_ins.__name__} 'module could not be registered!")
 
         if inspect.isclass(class_or_ins):
             _instance = class_or_ins(**options)
