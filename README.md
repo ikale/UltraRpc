@@ -18,13 +18,52 @@ def double(x:int,y:int)->int:
     return x**y
 
 ```
-3.  运行服务端
+3. 注册类或实例
+```
+class TestClass:
+
+    def __init__(self) -> None:
+        self.data = 1
+
+    def add(self,x:int)->int:
+        """操作类中的变量"""
+        self.data+=x
+        return self.data
+
+    def say(self,name:str)->str:
+        """测试输出"""
+        return f'hello {name}'
+
+    
+tc = TestClass()    
+rpcserver.register_class(tc,'testclass')
+
+
+
+@rpcserver.register_class('testclass2',data=50)
+class TestClass2:
+
+    def __init__(self,data) -> None:
+        self.data = data
+
+    def add(self,x:int)->int:
+        """操作类中的变量"""
+        self.data+=x
+        return self.data
+
+    def say(self,name:str)->str:
+        """测试输出"""
+        return f'hello {name}'
+
+```
+
+4.  运行服务端
 ```
 rpcserver.run()
 ```
 
 
-#### RpcServer
+#### RpcClient
 
 1.  连接服务端
 ```
