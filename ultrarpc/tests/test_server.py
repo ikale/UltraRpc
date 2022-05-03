@@ -41,11 +41,10 @@ def get_dict()->dict:
 
 
 
-@rpcserver.register_function
+@rpcserver.register
 def get_func():
-    """###目前还无法返回函数。测试返回一个函数"""
+    """##返回一个已注册的函数"""
     return sub
-
 
 
 # 注册类的实例
@@ -63,7 +62,28 @@ class TestClass:
         """测试输出"""
         return f'hello {name}'
 
-rpcserver.register_class(TestClass(),'testclass')
+tc = TestClass()
+rpcserver.register_class(tc,'testclass')
+
+
+
+@rpcserver.register
+def get_class():
+    """返回一个实例"""
+    return tc
+
+
+@rpcserver.register
+def get_classmethod():
+    """返回一个实例方法"""
+    return tc.say
+
+
+from functools import partial
+@rpcserver.register
+def get_partial():
+    """返回一个p"""
+    return partial(tc.say,'world')
 
 
 
@@ -84,6 +104,21 @@ class TestClass2:
         return f'hello {name}'
 
 
+
+@rpcserver.register('testclass3',data=50)
+class TestClass3:
+
+    def __init__(self,data) -> None:
+        self.data = data
+
+    def add(self,x:int)->int:
+        """操作类中的变量"""
+        self.data+=x
+        return self.data
+
+    def say(self,name:str)->str:
+        """测试输出"""
+        return f'hello {name}'
 
 
 

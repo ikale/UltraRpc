@@ -9,7 +9,9 @@ from xmlrpc.server import SimpleXMLRPCServer,DocXMLRPCServer,resolve_dotted_attr
 
 from datetime import datetime
 
-from .utils import is_port_open,get_funcs_info
+from matplotlib.pyplot import cla
+
+from .utils import is_port_open,get_funcs_info,RegistrationData
 
 @dataclass
 class ResultError:
@@ -21,7 +23,7 @@ KEEPWORD = ['results','clear_results','clear_calltasks','sys']
 def _add_multicall_funcinfo__(localproxy_instance,func,_locals):
     """为multicall增加一条调用信息"""
     _ = dict(
-        methodName=localproxy_instance._class+func.__name__,
+        methodName=localproxy_instance._ins+func.__name__,
         params=[]
         )
     for i in inspect.signature(func).parameters.keys():            
@@ -71,22 +73,23 @@ class Update_Localproxy:
                 setattr(localproxy_instances,name,types.MethodType(_rpc_func,localproxy_instances))
                 setattr(localproxy_instance2,name,types.MethodType(_rpc_func,localproxy_instance2))
             elif len(_arr)>1:
-                _class = _arr[0]
+                _ins = _arr[0]
                 _name = '.'.join(_arr[1:])
 
-                # print("带点的实例操作",_class,_name)
-
-                new_rpcfunc = localproxy_instances._child.get(_class)
+                # print("带点的实例操作",_ins,_name)
+                new_rpcfunc = localproxy_instances._child.get(_ins)
                 if new_rpcfunc:
-                    new_multicall = localproxy_instance2._child.get(_class)
+                    new_multicall = localproxy_instance2._child.get(_ins)
                 else:
-                    p_class = localproxy_instances._class
-                    new_rpcfunc = LocalProxy(localproxy_instances._sever_proxy,_class=p_class+_class)
-                    new_multicall = create_multicall_proxy_instance(localproxy_instances._sever_proxy,_class=p_class+_class)
-                    setattr(localproxy_instances,_class,new_rpcfunc)
-                    setattr(localproxy_instance2,_class,new_multicall)
-                    localproxy_instances._child[_class] = new_rpcfunc
-                    localproxy_instance2._child[_class] = new_multicall
+                    # 修改子类或创建子类
+                    p_ins = localproxy_instances._ins
+                    newclass = type(f['class_'],(LocalProxy,),globals())
+                    new_rpcfunc = newclass(localproxy_instances._sever_proxy,_ins=p_ins+_ins)
+                    new_multicall = create_multicall_proxy_instance(localproxy_instances._sever_proxy,_ins=p_ins+_ins,class_name=f['class_'])
+                    setattr(localproxy_instances,_ins,new_rpcfunc)
+                    setattr(localproxy_instance2,_ins,new_multicall)
+                    localproxy_instances._child[_ins] = new_rpcfunc
+                    localproxy_instance2._child[_ins] = new_multicall
                 
                 f['name'] = _name
                 cls.update_rpcfunc(new_rpcfunc,new_multicall,{_name:f})
@@ -117,9 +120,11 @@ class Update_Localproxy:
                     _add_multicall_funcinfo__(self,self.{name},locals())
                     return self
                 else: 
-                    __res__ = eval("self._sever_proxy."+self._class+"{name}")({args})
-                    if __res__.get("isfunc"):
+                    __res__ = eval("self._sever_proxy."+self._ins+"{name}")({args})
+                    if __res__.get("isfunc") or __res__.get("isclass"):
                         return eval(__res__["result"])
+                    elif __res__.get("ispartial"):
+                        return partial(eval(__res__["result"]),*__res__.get("args"))
                     else:
                         return __res__["result"]
         """
@@ -137,6 +142,12 @@ class Update_Localproxy:
 def _call_in_global_env(server_instance,f,params):
     """处理执行结果"""
     res = f(*params)
+    class_=None
+    try:
+        class_ = res._register_name_2ultrarpc__
+    except:
+        pass
+    
     if callable(res):
         # print("服务器实例",server_instance)
         # print("返回了一个函数：",res)
@@ -153,17 +164,23 @@ def _call_in_global_env(server_instance,f,params):
             registed_funcnames = [name for name,value in server_instance.funcs.items() if value==res.func]
             if registed_funcnames:
                 return dict(
-                result=f'partial(self.{registed_funcnames[0]},res.args)',
-                isfunc = True
+                result=f'self.{registed_funcnames[0]}',
+                args =res.args,
+                ispartial = True
                 )
             else:
                 pass
         else:
             pass
-    else:
+    elif class_ is not None:
         return dict(
-            result=res,
+            result = f'self.{class_}',
+            isclass = True
         )
+
+    return dict(
+        result=res,
+    )
 
 
 
@@ -250,9 +267,9 @@ class LocalProxy:
         sever_proxy,
         minimum_update_interval=2,
         is_multicall = False,
-        _class=''
+        _ins=''
         ) -> None:
-        self._class= _class+'.' if _class else ''
+        self._ins= _ins+'.' if _ins else ''
         self._sever_proxy = sever_proxy
         self._all_rpcfuncs = []
 
@@ -284,8 +301,12 @@ class LocalProxy:
 
 
 
-def create_multicall_proxy_instance(sever_proxy,_class='')->LocalProxy:
-    muticall = LocalProxy(sever_proxy,is_multicall=True,_class=_class)
+def create_multicall_proxy_instance(sever_proxy,_ins='',class_name=None)->LocalProxy:
+    if class_name is None:
+        muticall = LocalProxy(sever_proxy,is_multicall=True,_ins=_ins)
+    else:
+        newclass = type(class_name,(LocalProxy,),globals())
+        muticall = newclass(sever_proxy,is_multicall=True,_ins=_ins)
 
     def results(self,clear=True):
         if len(self._calltasks)>0:
@@ -332,8 +353,8 @@ class RpcClient:
         if self.__init:
             return
         self.__init = True
-        self._multicall:LocalProxy = create_multicall_proxy_instance(self._sever_proxy)
-        self.__rpcfunc:LocalProxy = LocalProxy(self._sever_proxy)
+        self._multicall:LocalProxy = create_multicall_proxy_instance(self._sever_proxy,class_name="Multicall")
+        self.__rpcfunc:LocalProxy = type("RpcFuncs",(LocalProxy,),globals())(self._sever_proxy)
         Update_Localproxy.rpcfunc_localproxy_instances = self.__rpcfunc
         Update_Localproxy.multicall_localproxy_instances =self._multicall
         Update_Localproxy.update_rpcfunc()
@@ -382,7 +403,21 @@ class RpcServer:
             'sys.multicall':self._server.system_multicall
             })
 
-        # self._server.register_multicall_functions()
+
+    def register(self,func=None,name=None,**options):
+        """将函数注册和类/实例注册 合二为一"""
+        if func is None:            
+            raise ValueError(f"register must be a class or instance or function or method")
+        
+        if type(func) is str:
+            return partial(self.register,name=func,**options)
+        
+        if inspect.ismethod(func) or inspect.isfunction(func):
+            self.register_function(func,name)
+        else:
+            self.register_class(func,name,**options)
+
+        return func
 
 
     def register_function(self,f=None,name=None):
@@ -419,7 +454,7 @@ class RpcServer:
         """
 
         if class_or_ins is None:
-            raise ValueError(f"{class_or_ins} is not an class_or_ins!")
+            raise ValueError(f"must be a class or instance")
                 
         if type(class_or_ins) is str: 
             return partial(self.register_class,name_=class_or_ins,**options)
@@ -432,6 +467,7 @@ class RpcServer:
         else:
             _instance = class_or_ins
 
+        setattr(_instance,"_register_name_2ultrarpc__",name_)
         for i in dir(_instance):
             if i.startswith("_"):
                 continue
