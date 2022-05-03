@@ -1,6 +1,11 @@
 # UltraRpc
 极致简洁的rpc,只需安心的写你的python代码，其他都不需要关心
 
+### 安装
+```
+pip install ultrarpc
+```
+
 ### 使用说明
 
 #### RpcServer
