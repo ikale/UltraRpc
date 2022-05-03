@@ -218,7 +218,7 @@ def _dispatch(self, method, params):
 
 
 
-def register_function(self, function=None, name=None):
+def register_function(self, function=None, name=None,class_=None):
     """
     可以注册函数和实例
     Registers a function to respond to XML-RPC requests.
@@ -232,11 +232,17 @@ def register_function(self, function=None, name=None):
     if name is None:
         name = function.__name__
 
+    if name.strip()=="":
+        raise ValueError(f"Name cannot be empty.")
+    
+    if " " in name:
+        raise ValueError(f"Name cannot have Spaces.")
+
     if name in KEEPWORD:
         raise ValueError(f"can't set {name},it's keep words!")
 
     self.funcs[name] = function
-    self.rpc_funcs_info[name] = get_funcs_info(function,name)
+    self.rpc_funcs_info[name] = get_funcs_info(function,name,class_)
     return function
 
 
@@ -420,7 +426,7 @@ class RpcServer:
         return func
 
 
-    def register_function(self,f=None,name=None):
+    def register_function(self,f=None,name=None,class_=None):
         """将函数注册为 rpc函数"""
         # decorator factory
         if f is None:
@@ -438,7 +444,7 @@ class RpcServer:
             self._server.funcs = funcs            
             msg = f'Registered name "{name}" already exists, and has been covered'
             warnings.warn(msg,UserWarning)
-        self._server.register_function(f,name)
+        self._server.register_function(f,name,class_)
         return f
 
 
@@ -456,7 +462,7 @@ class RpcServer:
         if class_or_ins is None:
             raise ValueError(f"must be a class or instance")
                 
-        if type(class_or_ins) is str: 
+        if type(class_or_ins) is str:            
             return partial(self.register_class,name_=class_or_ins,**options)
             
         if name_ is None:
@@ -471,15 +477,20 @@ class RpcServer:
             _instance = class_or_ins
 
         setattr(_instance,"_register_name_2ultrarpc__",name_)
+        class_ = _instance.__class__.__name__
         for i in dir(_instance):
             if i.startswith("_"):
                 continue
-
             f = getattr(_instance,i)
-            if inspect.ismethod(f) or inspect.isfunction(f):
-
+            if inspect.ismethod(f):
                 method_name = f'{name_}.{i}'
-                self.register_function(f,method_name)
+                self.register_function(f,method_name,class_)
+            
+            if inspect.isfunction(f):
+                # 静态方法                
+                method_name = f'{name_}.{i}'
+                # print(f"{method_name} 静态方法",class_)
+                self.register_function(f,method_name,class_)
         
         return class_or_ins
 

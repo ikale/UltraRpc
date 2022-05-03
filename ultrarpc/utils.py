@@ -20,18 +20,20 @@ class RegistrationData:
     classes = {}   #{'classname': [方法名1,方法名2]}
 
 
-def get_funcs_info(f:callable,name=None):
+def get_funcs_info(f:callable,name=None,class_=None):
     """获取函数信息"""
     name = f.__name__ if name is None else name
     _arr = name.split('.')
  
     ins_ = _arr[0] if len(_arr)==2 else ''
-    class_ = ''
-    if ins_:
-        try:
-            class_ = f.__self__.__class__.__name__
-        except:
-            pass
+    class_ = '' if class_ is None else class_
+    if not class_:
+        if ins_:
+            try:
+                class_ = f.__self__.__class__.__name__
+            except:
+                pass
+    
     if class_:
         if RegistrationData.classes.get(class_) is None:
             RegistrationData.classes[class_] = [name]
