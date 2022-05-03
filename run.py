@@ -2,7 +2,7 @@
 # 打包whl文件,并发布到pipy.org
 """
 # python setup.py bdist_wheel
-# python -m twine upload ./dist/ultrarpc-0.5.3-py3-none-any.whl
+# python -m twine upload ./dist/ultrarpc-0.5.4-py3-none-any.whl
 import os
 import subprocess
 
