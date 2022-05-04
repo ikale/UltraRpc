@@ -21,8 +21,8 @@ setup(
     # packages=["major.major1"],  # packages: 打包的python文件夹
     packages=find_packages(), # 需要处理的包目录（包含__init__.py的文件夹）
     keywords=["RPC", "ultrarpc"],  # 程序的关键字列表
-    description="ultrarpc for python",                 # 简单描述
-    long_description="Acme concise RPC, just peace of mind of write your python code", # 详细描述
+    description=r"Ultrarpc is 20% faster than zerorpc",                 # 简单描述
+    long_description="ultrarpc is ultra light-weight and faster，which take no  dependency to the third  library .", # 详细描述
     license="Apache-2.0",  # 授权信息
     url="https://github.com/ikale/UltraRpc",  # 官网地址 
     platforms="any",  # 适用的软件平台列表

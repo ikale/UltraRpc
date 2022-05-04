@@ -1,5 +1,7 @@
 # UltraRpc
-极致简洁的rpc,只需安心的写你的python代码，其他都不需要关心
+ultrarpc是轻量快速的rpc服务，对第三方库零依赖，速度比zerorpc快20%.
+<!-- ultrarpc is ultra light-weight and faster，which take no  dependency to the third  library .
+it's 20% faster than zerorpc. -->
 
 ### 安装
 ```
